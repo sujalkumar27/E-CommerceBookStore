@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/bookstore}
+    username: ${DB_USER:bookstore_user}
+    password: ${DB_PASSWORD:bookstore_pass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+server:
+  port: 8080
+  address: 127.0.0.1
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-in-production-min-256-bits-long-secret-key}
+    expiry-hours: ${JWT_EXPIRY_HOURS:24}
+  cors:
+    frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  seed:
+    path: classpath:data/seed.json
+
+logging:
+  level:
+    com.bookstore: INFO
+    org.springframework.security: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%level] %logger{36} - %msg%n"
