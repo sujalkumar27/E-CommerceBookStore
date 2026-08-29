@@ -1,0 +1,726 @@
+{
+  "info": {
+    "name": "E-Commerce Bookstore API",
+    "_postman_id": "bookstore-api-collection-v1",
+    "description": "Complete API collection for the E-Commerce Bookstore.\n\nHOW TO USE:\n1. Import this file into Postman (File → Import)\n2. The collection uses a variable {{baseUrl}} — it is set to http://127.0.0.1:8080\n3. After you run 'Login' or 'Register', the JWT token is saved automatically\n4. All protected requests use that saved token automatically\n\nTEST ORDER:\n- Phase 2: Run Auth requests (Register → Login → Get Balance)\n- Phase 3: Run Book requests (after seeding catalogue)\n- Phase 4: Run Basket requests (must be logged in)\n- Phase 5: Run Order/Payment requests (must have items in basket)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8080",
+      "description": "Backend base URL. Change this if your server runs on a different port."
+    },
+    {
+      "key": "token",
+      "value": "",
+      "description": "JWT token — automatically set after Login or Register. Do not edit manually."
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "description": "Logged-in user ID — automatically set after Login or Register."
+    }
+  ],
+  "item": [
+    {
+      "name": "Phase 2 — Authentication",
+      "description": "Test user registration, login, and logout.\n\nRUN IN ORDER:\n1. Register a new user\n2. Login with that user\n3. Check gift point balance (tests that the token works)",
+      "item": [
+        {
+          "name": "Register — Create a new account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// After a successful registration, save the token automatically",
+                  "// so all future requests use it without copy-pasting",
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('token', body.token);",
+                  "    pm.collectionVariables.set('userId', body.user.id);",
+                  "    console.log('Token saved automatically:', body.token.substring(0, 20) + '...');",
+                  "}",
+                  "",
+                  "// Tests — Postman will show PASS/FAIL for each",
+                  "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has token', () => pm.expect(pm.response.json().token).to.be.a('string'));",
+                  "pm.test('Response has user email', () => pm.expect(pm.response.json().user.email).to.be.a('string'));",
+                  "pm.test('Gift point balance starts at 0', () => pm.expect(pm.response.json().user.giftPointBalance).to.equal(0));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@test.com\",\n  \"password\": \"password123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Creates a new customer account.\n\nExpected: 201 Created with a JWT token and user details.\nTry again with the same email → should get 409 Conflict."
+          }
+        },
+        {
+          "name": "Register — Duplicate email (should fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('Error message is present', () => pm.expect(pm.response.json().message).to.be.a('string'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@test.com\",\n  \"password\": \"password123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Try to register with the same email a second time.\nExpected: 409 Conflict — 'An account with this email already exists.'"
+          }
+        },
+        {
+          "name": "Register — Missing password (validation test)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('Field error for password', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.fieldErrors).to.have.property('password');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bob@test.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Try to register without a password.\nExpected: 400 Bad Request with fieldErrors.password explaining what is wrong."
+          }
+        },
+        {
+          "name": "Login — Valid credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Save token automatically so all future requests work",
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('token', body.token);",
+                  "    pm.collectionVariables.set('userId', body.user.id);",
+                  "    console.log('Logged in. Token saved.');",
+                  "}",
+                  "",
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has token', () => pm.expect(pm.response.json().token).to.be.a('string'));",
+                  "pm.test('Email matches', () => pm.expect(pm.response.json().user.email).to.equal('alice@test.com'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@test.com\",\n  \"password\": \"password123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login with valid credentials.\nExpected: 200 OK with JWT token.\nThe token is automatically saved for all future requests."
+          }
+        },
+        {
+          "name": "Login — Wrong password (should fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('Generic error message (not revealing which field)', () => {",
+                  "    const msg = pm.response.json().message;",
+                  "    pm.expect(msg).to.equal('Invalid credentials.');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@test.com\",\n  \"password\": \"wrongpassword\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Try logging in with wrong password.\nExpected: 401 Unauthorized with GENERIC message.\nThe message must NOT reveal whether the email or password is wrong (security rule)."
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Logout message present', () => {",
+                  "    pm.expect(pm.response.json().message).to.equal('Logged out successfully.');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Logout the current user.\nNote: JWT is stateless — the server just acknowledges. The frontend deletes the token.\nExpected: 200 OK with a logout confirmation message."
+          }
+        },
+        {
+          "name": "Health Check — Is the server running?",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is UP', () => pm.expect(pm.response.json().status).to.equal('UP'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Run this FIRST to confirm the backend server is running.\nExpected: { \"status\": \"UP\" }\nIf this fails → the server is not started yet."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 3 — Books & Categories",
+      "description": "Test catalogue browsing, search, filtering, and product detail.\nRun seed script first so the database has books.\n\nAll these endpoints are PUBLIC — no login needed.",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('Categories have name and deliveryOffsetDays', () => {",
+                  "    const cats = pm.response.json();",
+                  "    if (cats.length > 0) {",
+                  "        pm.expect(cats[0]).to.have.property('name');",
+                  "        pm.expect(cats[0]).to.have.property('deliveryOffsetDays');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"]
+            },
+            "description": "Get all book categories with their delivery offset days.\nExpected: array of { id, name, deliveryOffsetDays }"
+          }
+        },
+        {
+          "name": "Get All Books (no filters)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has content array', () => pm.expect(pm.response.json().content).to.be.an('array'));",
+                  "pm.test('Response has pagination info', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('totalElements');",
+                  "    pm.expect(body).to.have.property('totalPages');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/books?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "books"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Get the first page of all books.\nExpected: { content: [...books], page, size, totalElements, totalPages }"
+          }
+        },
+        {
+          "name": "Search Books by title",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/books?search=harry&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "books"],
+              "query": [
+                { "key": "search", "value": "harry" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Search books with the word 'harry' in title, author, category, or publisher.\nChange the search value to test different queries."
+          }
+        },
+        {
+          "name": "Filter Books by price range",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/books?minPrice=100&maxPrice=500&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "books"],
+              "query": [
+                { "key": "minPrice", "value": "100" },
+                { "key": "maxPrice", "value": "500" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Filter books between ₹100 and ₹500."
+          }
+        },
+        {
+          "name": "Filter — In Stock Only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/books?available=true&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "books"],
+              "query": [
+                { "key": "available", "value": "true" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Get only books that are currently in stock."
+          }
+        },
+        {
+          "name": "Get Single Book Detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has relatedBooks array', () => {",
+                  "    pm.expect(pm.response.json().relatedBooks).to.be.an('array');",
+                  "});",
+                  "pm.test('Response has tentativeDeliveryDays', () => {",
+                  "    pm.expect(pm.response.json().tentativeDeliveryDays).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/books/REPLACE_WITH_A_REAL_BOOK_ID",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "books", "REPLACE_WITH_A_REAL_BOOK_ID"]
+            },
+            "description": "Get full detail of one book including related books.\nSTEP: First run 'Get All Books', copy an ID from the response, paste it here.\nExpected: book detail + relatedBooks (up to 6 same category) + tentativeDeliveryDays"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 — Basket",
+      "description": "Test adding, updating, and removing items from the basket.\nMUST BE LOGGED IN — run Login first so the token is saved.",
+      "item": [
+        {
+          "name": "Get My Basket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Basket has items array', () => pm.expect(pm.response.json().items).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/basket",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "basket"]
+            },
+            "description": "Get the current user's basket.\nExpected: { items: [...], basketTotal: 0 }"
+          }
+        },
+        {
+          "name": "Add Item to Basket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Basket has at least one item', () => {",
+                  "    pm.expect(pm.response.json().items.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookId\": \"REPLACE_WITH_A_REAL_BOOK_ID\",\n  \"quantity\": 2\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/basket/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "basket", "items"]
+            },
+            "description": "Add a book to the basket.\nSTEP: Replace REPLACE_WITH_A_REAL_BOOK_ID with an actual book ID from Phase 3."
+          }
+        },
+        {
+          "name": "Add to Basket — No token (guest, should fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookId\": \"any-id\",\n  \"quantity\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/basket/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "basket", "items"]
+            },
+            "description": "Try adding to basket WITHOUT a token (simulating a guest user).\nExpected: 401 Unauthorized — guests cannot use the basket."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 5 — Checkout & Orders",
+      "description": "Test the full purchase flow, order history, and cancellation.\nMUST BE LOGGED IN and MUST HAVE ITEMS IN BASKET.",
+      "item": [
+        {
+          "name": "Get My Addresses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "addresses"]
+            }
+          }
+        },
+        {
+          "name": "Add a Delivery Address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('addressId', pm.response.json().id);",
+                  "    console.log('Address ID saved:', pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Alice Smith\",\n  \"line1\": \"123 MG Road\",\n  \"line2\": \"Apt 4B\",\n  \"city\": \"Bangalore\",\n  \"state\": \"Karnataka\",\n  \"pincode\": \"560001\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "addresses"]
+            },
+            "description": "Save a delivery address for the logged-in user.\nThe address ID is saved automatically for use in Initiate Payment."
+          }
+        },
+        {
+          "name": "Initiate Payment (Checkout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('orderId', pm.response.json().orderId);",
+                  "    console.log('Order created! ID:', pm.response.json().orderId);",
+                  "    pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+                  "    pm.test('Order has items', () => pm.expect(pm.response.json().items.length).to.be.greaterThan(0));",
+                  "} else if (pm.response.code === 402) {",
+                  "    pm.test('Payment failed (simulated)', () => pm.response.to.have.status(402));",
+                  "    console.log('Payment simulation returned failure. Try again.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deliveryAddressId\": \"{{addressId}}\",\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"giftPointsToRedeem\": 0\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/initiate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "initiate"]
+            },
+            "description": "Complete the checkout and create an order.\nUses the address saved from 'Add a Delivery Address'.\n\nExpected: 201 Created with full order details (purchase confirmation data)\nOr: 402 Payment Required (simulated failure — just try again)"
+          }
+        },
+        {
+          "name": "Get My Order History",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            },
+            "description": "Get all orders for the logged-in user.\nExpected: array of order summaries with cancellable flag."
+          }
+        },
+        {
+          "name": "Cancel an Order (within 48 hours)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Order status is CANCELLED', () => {",
+                  "    pm.expect(pm.response.json().status).to.equal('CANCELLED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "cancel"]
+            },
+            "description": "Cancel the order created in 'Initiate Payment'.\nThe orderId is saved automatically.\n\nExpected: 200 OK with status = CANCELLED\nIf 48 hours have passed: 400 Bad Request"
+          }
+        },
+        {
+          "name": "Get Gift Point Balance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Balance is a number', () => pm.expect(pm.response.json().balance).to.be.a('number'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/gift-points/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gift-points", "balance"]
+            },
+            "description": "Get the logged-in user's gift point balance.\n1 point = ₹1. New users start at 0."
+          }
+        },
+        {
+          "name": "Get Recommendations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Books array present', () => pm.expect(pm.response.json().books).to.be.an('array'));",
+                  "pm.test('Max 8 recommendations', () => pm.expect(pm.response.json().books.length).to.be.at.most(8));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/recommendations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recommendations"]
+            },
+            "description": "Get personalised book recommendations.\nBlended from: same category, same author, newest books.\nExcludes books already ordered by the user.\nMax 8 results."
+          }
+        }
+      ]
+    }
+  ]
+}
