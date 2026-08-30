@@ -448,7 +448,7 @@
             "url": {
               "raw": "{{baseUrl}}/api/basket",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "basket"]
+              "path": ["api", "cart"]
             },
             "description": "Get the current user's basket.\nExpected: { items: [...], basketTotal: 0 }"
           }
@@ -484,13 +484,13 @@
             "url": {
               "raw": "{{baseUrl}}/api/basket/items",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "basket", "items"]
+              "path": ["api", "cart", "items"]
             },
             "description": "Add a book to the basket.\nSTEP: Replace REPLACE_WITH_A_REAL_BOOK_ID with an actual book ID from Phase 3."
           }
         },
         {
-          "name": "Add to Basket — No token (guest, should fail)",
+          "name": "Add to Cart — No token (guest, should fail)",
           "event": [
             {
               "listen": "test",
@@ -513,7 +513,7 @@
             "url": {
               "raw": "{{baseUrl}}/api/basket/items",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "basket", "items"]
+              "path": ["api", "cart", "items"]
             },
             "description": "Try adding to basket WITHOUT a token (simulating a guest user).\nExpected: 401 Unauthorized — guests cannot use the basket."
           }
