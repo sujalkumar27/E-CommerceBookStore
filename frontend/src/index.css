@@ -1,0 +1,14 @@
+/* Tailwind's three layers inject all utility classes into this stylesheet */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Custom base styles ────────────────────────────────────────────────── */
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
+
+/* Smooth focus ring for accessibility */
+*:focus-visible {
+  @apply outline-2 outline-offset-2 outline-brand-500;
+}
