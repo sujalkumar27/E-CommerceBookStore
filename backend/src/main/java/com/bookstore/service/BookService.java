@@ -6,11 +6,13 @@ import com.bookstore.exception.ResourceNotFoundException;
 import com.bookstore.model.Book;
 import com.bookstore.model.Category;
 import com.bookstore.repository.BookRepository;
+import com.bookstore.repository.BookSpecification;
 import com.bookstore.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,12 +78,17 @@ public class BookService {
         int safeSize = Math.min(size, 100);
         Pageable pageable = PageRequest.of(page, safeSize);
 
-        // Run the query — empty string treated same as null (no search)
+        // Normalise blank search to null so the specification skips that predicate
         String searchTerm = (search != null && !search.isBlank()) ? search.trim() : null;
 
+        // Build a type-safe Specification (avoids the Hibernate 6 + UUID null bug
+        // that occurred with the old JPQL ":categoryId IS NULL" pattern).
+        Specification<Book> spec = BookSpecification.withFilters(
+                searchTerm, categoryId, publisher, minPrice, maxPrice, available);
+
         return bookRepository
-                .findWithFilters(searchTerm, categoryId, publisher, minPrice, maxPrice, available, pageable)
-                .map(this::toSummaryDto);  // Convert each Book entity → BookSummaryDto
+                .findAll(spec, pageable)          // JpaSpecificationExecutor method
+                .map(this::toSummaryDto);         // Convert each Book entity → BookSummaryDto
     }
 
     /**

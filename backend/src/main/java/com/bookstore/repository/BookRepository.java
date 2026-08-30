@@ -4,11 +4,11 @@ import com.bookstore.model.Book;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,77 +19,31 @@ import java.util.UUID;
  *
  * WHAT THIS DOES:
  * All database queries for the "books" table.
- * This includes: search, filter, find by ID, find related books,
- * find by author (for recommendations).
+ *
+ * WHY WE REMOVED findWithFilters() JPQL QUERY:
+ * Hibernate 6 + PostgreSQL has a known type-inference bug when you write
+ *   ":categoryId IS NULL"  in JPQL where :categoryId is a UUID parameter.
+ * Hibernate cannot figure out the SQL type of a NULL UUID value and throws
+ * a ClassCastException or "could not determine data type" error at runtime.
+ *
+ * THE FIX — JpaSpecificationExecutor:
+ * Instead of one big JPQL string, we build the WHERE clause programmatically
+ * in BookSpecification.java.  Each filter is added only when its value is
+ * non-null — so the "IS NULL" check is done in Java, not in SQL, and
+ * Hibernate never sees a NULL UUID parameter.
  *
  * KEY CONCEPTS:
  *
+ * JpaSpecificationExecutor<Book>:
+ *   An extra interface from Spring Data JPA that adds a `findAll(Specification, Pageable)`
+ *   method.  The Specification is a lambda that builds JPA Criteria predicates.
+ *
  * Page<Book> and Pageable:
- *   Instead of returning ALL books (could be thousands), we return
- *   one "page" at a time. The caller says "give me page 0, 20 books per page".
- *   Spring handles the SQL LIMIT and OFFSET automatically.
- *
- * @Query with JPQL:
- *   JPQL (Java Persistence Query Language) looks like SQL but uses
- *   Java class/field names, not table/column names.
- *   Example: "FROM Book b" instead of "FROM books b"
- *
- * :param notation:
- *   The :categoryId syntax is a "named parameter" — Spring replaces it
- *   with the actual value, preventing SQL injection attacks.
+ *   Instead of returning ALL books (could be thousands), we return one
+ *   "page" at a time.  Spring handles the SQL LIMIT and OFFSET automatically.
  */
 @Repository
-public interface BookRepository extends JpaRepository<Book, UUID> {
-
-    /**
-     * Main catalogue query — supports search + all filters combined.
-     *
-     * HOW THE QUERY WORKS:
-     * - :search      → matches title, author, publisher, or category name
-     *                  LOWER() makes it case-insensitive
-     *                  LIKE '%keyword%' matches if keyword appears anywhere
-     *                  The 'true = true' trick means: if search is null/empty,
-     *                  skip the search condition entirely
-     * - :categoryId  → filter by category UUID (null = no filter)
-     * - :publisher   → filter by publisher name (null = no filter)
-     * - :minPrice    → minimum price (null = no minimum)
-     * - :maxPrice    → maximum price (null = no maximum)
-     * - :available   → true = only in-stock books (null = all books)
-     *
-     * @param search     - free text search term (nullable)
-     * @param categoryId - filter by category UUID (nullable)
-     * @param publisher  - filter by publisher name (nullable)
-     * @param minPrice   - minimum price filter (nullable)
-     * @param maxPrice   - maximum price filter (nullable)
-     * @param available  - true = in-stock only (nullable)
-     * @param pageable   - page number and size
-     * @return Page of books matching all provided filters
-     */
-    @Query("""
-            SELECT b FROM Book b
-            JOIN b.category c
-            WHERE (:search IS NULL OR :search = '' OR (
-                LOWER(b.title)     LIKE LOWER(CONCAT('%', :search, '%')) OR
-                LOWER(b.author)    LIKE LOWER(CONCAT('%', :search, '%')) OR
-                LOWER(b.publisher) LIKE LOWER(CONCAT('%', :search, '%')) OR
-                LOWER(c.name)      LIKE LOWER(CONCAT('%', :search, '%'))
-            ))
-            AND (:categoryId IS NULL OR c.id = :categoryId)
-            AND (:publisher  IS NULL OR LOWER(b.publisher) LIKE LOWER(CONCAT('%', :publisher, '%')))
-            AND (:minPrice   IS NULL OR b.price >= :minPrice)
-            AND (:maxPrice   IS NULL OR b.price <= :maxPrice)
-            AND (:available  IS NULL OR (:available = TRUE AND b.stock > 0) OR :available = FALSE)
-            ORDER BY b.createdAt DESC
-            """)
-    Page<Book> findWithFilters(
-            @Param("search")     String search,
-            @Param("categoryId") UUID categoryId,
-            @Param("publisher")  String publisher,
-            @Param("minPrice")   BigDecimal minPrice,
-            @Param("maxPrice")   BigDecimal maxPrice,
-            @Param("available")  Boolean available,
-            Pageable pageable
-    );
+public interface BookRepository extends JpaRepository<Book, UUID>, JpaSpecificationExecutor<Book> {
 
     /**
      * Find related books — same category, excluding the current book.
