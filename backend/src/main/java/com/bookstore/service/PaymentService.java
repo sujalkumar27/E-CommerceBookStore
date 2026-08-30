@@ -17,7 +17,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.UUID;
 
 /**
@@ -55,8 +55,9 @@ public class PaymentService {
     private final UserRepository userRepository;
     private final AddressService addressService;
 
-    // Random for payment simulation (not for cryptography — that's fine here)
-    private final Random random = new Random();
+    // SecureRandom for payment simulation success/failure (D-004).
+    // SecureRandom is used instead of java.util.Random per IBM security policy.
+    private final SecureRandom random = new SecureRandom();
 
     /**
      * Initiate payment and create the order.

@@ -1,4 +1,14 @@
-
+﻿# Build artifacts
 backend/target/
 frontend/dist/
 frontend/node_modules/
+
+# Secrets -- NEVER commit real credentials
+.env
+*.env.local
+*.env.production
+
+# IDE files
+.idea/
+*.iml
+.vscode/

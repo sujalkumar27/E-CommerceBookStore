@@ -12,7 +12,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
+        format_sql: false
 
   jackson:
     serialization:
@@ -34,7 +34,13 @@ app:
 
 logging:
   level:
+    # Application-level INFO is appropriate for production
+    # Set to DEBUG locally via environment variable if needed
     com.bookstore: INFO
     org.springframework.security: WARN
+    # SQL logging disabled — was only used for debugging GET /api/books
+    # Re-enable locally by setting: LOGGING_LEVEL_ORG_HIBERNATE_SQL=DEBUG
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%level] %logger{36} - %msg%n"
