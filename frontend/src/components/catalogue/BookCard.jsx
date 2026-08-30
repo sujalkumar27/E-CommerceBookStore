@@ -11,7 +11,7 @@ export default function BookCard({ book, onAddToCart, isLoggedIn }) {
         <img
           src={book.coverImageUrl || `https://placehold.co/200x280/1e3a5f/ffffff?text=${encodeURIComponent(book.title.slice(0,12))}`}
           alt={`Cover of ${book.title}`}
-          className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-40 sm:h-52 object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
           onError={(e) => { e.target.src = `https://placehold.co/200x280/1e3a5f/ffffff?text=📚`; }}
         />

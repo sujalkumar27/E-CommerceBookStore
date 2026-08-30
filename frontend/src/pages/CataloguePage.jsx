@@ -136,14 +136,14 @@ export default function CataloguePage() {
       {/* ── Hero banner — only on the home page (no search/filter active) ── */}
       {!searchTerm && !filters.categoryId && !filters.available && (
         <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-900 text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 flex flex-col md:flex-row items-center gap-8">
-            <div className="flex-1">
-              <p className="text-blue-300 text-sm font-semibold uppercase tracking-widest mb-2">📚 Welcome to BookStore</p>
-              <h1 className="text-4xl md:text-5xl font-black leading-tight mb-4">
-                Your next great<br />
-                <span className="text-blue-400">read is here.</span>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14 flex flex-col md:flex-row items-center gap-8">
+            <div className="flex-1 min-w-0">
+              <p className="text-blue-300 text-xs sm:text-sm font-semibold uppercase tracking-widest mb-2">📚 Welcome to BookStore</p>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight mb-4">
+                Your next great read
+                <span className="text-blue-400 block sm:inline"><br className="hidden sm:block" /> is here.</span>
               </h1>
-              <p className="text-slate-300 text-base mb-6 max-w-md">
+              <p className="text-slate-300 text-sm sm:text-base mb-6 max-w-md">
                 Browse 113 hand-picked books across 8 categories. Find your next favourite — from technology to fiction.
               </p>
               <div className="flex flex-wrap gap-2">
