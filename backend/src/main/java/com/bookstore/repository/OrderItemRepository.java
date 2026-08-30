@@ -1,5 +1,6 @@
 package com.bookstore.repository;
 
+import com.bookstore.model.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -29,7 +30,7 @@ import java.util.UUID;
  * This file is created in Phase 4 because RecommendationService needs it.
  */
 @Repository
-public interface OrderItemRepository extends JpaRepository<Object, UUID> {
+public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
 
     /**
      * Get all book IDs that a user has ever ordered.
