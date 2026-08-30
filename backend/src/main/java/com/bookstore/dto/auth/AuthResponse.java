@@ -42,6 +42,7 @@ public record AuthResponse(
      */
     public record UserInfo(
             UUID id,
+            String name,
             String email,
             int giftPointBalance,
             Instant createdAt

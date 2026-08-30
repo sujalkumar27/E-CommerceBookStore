@@ -6,9 +6,19 @@
 /* ─── Custom base styles ────────────────────────────────────────────────── */
 body {
   @apply bg-gray-50 text-gray-900 antialiased;
+  font-feature-settings: "kern" 1, "liga" 1;
 }
+
+/* Better scrollbar on webkit browsers */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { @apply bg-gray-100; }
+::-webkit-scrollbar-thumb { @apply bg-gray-400 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-gray-500; }
 
 /* Smooth focus ring for accessibility */
 *:focus-visible {
-  @apply outline-2 outline-offset-2 outline-brand-500;
+  @apply outline-2 outline-offset-2 outline-blue-500;
 }
+
+/* Smooth scroll */
+html { scroll-behavior: smooth; }

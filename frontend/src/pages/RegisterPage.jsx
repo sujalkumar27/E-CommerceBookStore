@@ -1,14 +1,7 @@
-// RegisterPage.jsx — New account registration form.
+// RegisterPage.jsx — Registration form with book-themed split layout.
 //
-// URL: /register
-// Public: yes
-//
-// FLOW:
-//   1. User fills in name, email, password, confirm password
-//   2. POST /api/auth/register
-//   3. On 201: call login(token, user), navigate to /
-//   4. On 409: "An account with this email already exists."
-//   5. On 400: show field-level validation errors from backend
+// FIXED: now sends { name, email, password } to match the backend RegisterRequest DTO.
+// VALIDATION: real-time field validation with clear error messages.
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -16,116 +9,191 @@ import { register } from '../api/authApi.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 
+// ── Validation helpers ────────────────────────────────────────────────────────
+const validators = {
+  name:            (v) => !v.trim() ? 'Full name is required.' : v.trim().length < 2 ? 'Name is too short.' : '',
+  email:           (v) => !v.trim() ? 'Email is required.' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Enter a valid email address.' : '',
+  password:        (v) => !v ? 'Password is required.' : v.length < 8 ? 'Password must be at least 8 characters.' : '',
+  confirmPassword: (v, form) => v !== form.password ? 'Passwords do not match.' : '',
+};
+
 export default function RegisterPage() {
   const { login, isLoggedIn } = useAuth();
   const { refreshCartCount }  = useCart();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [touched,     setTouched]     = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
-  const [error, setError]   = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState(null);
+  const [loading,     setLoading]     = useState(false);
+  const [showPwd,     setShowPwd]     = useState(false);
 
   if (isLoggedIn) { navigate('/'); return null; }
 
-  const handle = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  // Mark field as touched and validate it on every change
+  const handle = (e) => {
+    const { name, value } = e.target;
+    const newForm = { ...form, [name]: value };
+    setForm(newForm);
+    setTouched((t) => ({ ...t, [name]: true }));
+    const msg = validators[name]?.(value, newForm) || '';
+    setFieldErrors((fe) => ({ ...fe, [name]: msg }));
+    // Re-validate confirmPassword whenever password changes
+    if (name === 'password' && touched.confirmPassword) {
+      setFieldErrors((fe) => ({
+        ...fe,
+        confirmPassword: validators.confirmPassword(newForm.confirmPassword, newForm),
+      }));
+    }
+  };
 
-  // Client-side validation before sending the request
-  const validate = () => {
-    const e = {};
-    if (!form.name.trim())          e.name     = 'Name is required.';
-    if (!form.email.includes('@'))  e.email    = 'Enter a valid email.';
-    if (form.password.length < 8)   e.password = 'Password must be at least 8 characters.';
-    if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match.';
-    return e;
+  // Validate all fields before submit
+  const validateAll = () => {
+    const errs = {};
+    errs.name            = validators.name(form.name);
+    errs.email           = validators.email(form.email);
+    errs.password        = validators.password(form.password);
+    errs.confirmPassword = validators.confirmPassword(form.confirmPassword, form);
+    return errs;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    const errs = validateAll();
+    const hasErrors = Object.values(errs).some(Boolean);
+    setFieldErrors(errs);
+    setTouched({ name: true, email: true, password: true, confirmPassword: true });
+    if (hasErrors) return;
 
-    setFieldErrors({});
-    setError(null);
+    setServerError(null);
     setLoading(true);
     try {
-      const res = await register(form.name, form.email, form.password);
+      const res = await register(form.name.trim(), form.email.trim(), form.password);
       login(res.data.token, res.data.user);
       await refreshCartCount();
       navigate('/');
     } catch (err) {
       if (err.response?.status === 409) {
-        setError('An account with this email already exists.');
+        setServerError('An account with this email already exists.');
       } else if (err.response?.status === 400 && err.response.data?.fieldErrors) {
-        // Map backend field errors to the form
+        // Map backend field validation errors onto form fields
         const fe = {};
-        err.response.data.fieldErrors.forEach(({ field, message }) => { fe[field] = message; });
+        Object.entries(err.response.data.fieldErrors).forEach(([field, msg]) => { fe[field] = msg; });
         setFieldErrors(fe);
+        setTouched({ name: true, email: true, password: true, confirmPassword: true });
       } else {
-        setError('Something went wrong. Please try again.');
+        setServerError('Something went wrong. Please try again.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const fields = [
-    { name: 'name',            label: 'Full Name',        type: 'text',     autocomplete: 'name' },
-    { name: 'email',           label: 'Email',            type: 'email',    autocomplete: 'email' },
-    { name: 'password',        label: 'Password',         type: 'password', autocomplete: 'new-password' },
-    { name: 'confirmPassword', label: 'Confirm Password', type: 'password', autocomplete: 'new-password' },
-  ];
+  // Helper: show error for a field only if it was touched
+  const err = (name) => touched[name] && fieldErrors[name] ? fieldErrors[name] : '';
+
+  const inputCls = (name) =>
+    `w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors bg-white
+     ${err(name) ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'}`;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="text-4xl mb-3">📚</div>
-          <h1 className="text-2xl font-bold text-gray-900">Create an account</h1>
-          <p className="text-sm text-gray-500 mt-1">Join BookStore today</p>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-300 text-red-700 text-sm rounded-lg px-4 py-3 mb-5">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {fields.map(({ name, label, type, autocomplete }) => (
-            <div key={name}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-              <input
-                type={type}
-                name={name}
-                value={form[name]}
-                onChange={handle}
-                required
-                autoComplete={autocomplete}
-                className={`w-full border rounded-lg px-4 py-2.5 text-sm
-                            focus:ring-2 focus:ring-blue-400 focus:outline-none
-                            ${fieldErrors[name] ? 'border-red-400' : 'border-gray-300'}`}
-              />
-              {fieldErrors[name] && (
-                <p className="text-xs text-red-500 mt-1">{fieldErrors[name]}</p>
-              )}
-            </div>
+    <div className="min-h-screen flex">
+      {/* ── Left decorative panel ─────────────────────────────────────────── */}
+      <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-900 flex-col justify-between p-12 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 text-white text-8xl leading-tight select-none pointer-events-none overflow-hidden">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <span key={i} className="inline-block mr-3">📖</span>
           ))}
+        </div>
+        <div className="relative z-10">
+          <div className="text-white text-4xl font-black tracking-tight">📚 BookStore</div>
+          <p className="text-emerald-200 mt-2 text-sm">India's favourite online bookstore</p>
+        </div>
+        <div className="relative z-10 space-y-4">
+          {['🎁 Start with 0 gift points — earn more on every order',
+            '🚚 Track all your deliveries in one place',
+            '📦 Save multiple delivery addresses',
+            '🔄 Re-order your favourites in one click',
+          ].map((perk) => (
+            <div key={perk} className="flex items-start gap-2 text-emerald-100 text-sm">{perk}</div>
+          ))}
+        </div>
+        <p className="relative z-10 text-emerald-300 text-xs">Free to join. No credit card required.</p>
+      </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold
-                       py-3 rounded-xl transition-colors disabled:opacity-60"
-          >
-            {loading ? 'Creating account…' : 'Create Account'}
-          </button>
-        </form>
+      {/* ── Right form panel ─────────────────────────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center bg-gray-50 px-6 py-10">
+        <div className="w-full max-w-md">
+          <div className="lg:hidden text-center mb-6">
+            <div className="text-4xl mb-2">📚</div>
+            <h2 className="text-xl font-bold text-gray-900">BookStore</h2>
+          </div>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Already have an account?{' '}
-          <Link to="/login" className="text-blue-600 font-semibold hover:underline">Sign In</Link>
-        </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">Create your account</h1>
+          <p className="text-gray-500 text-sm mb-7">Join thousands of readers today</p>
+
+          {serverError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-5 flex items-center gap-2">
+              <span>⚠️</span> {serverError}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            {/* Full Name */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+              <input type="text" name="name" value={form.name} onChange={handle}
+                autoComplete="name" placeholder="Sujal Kumar"
+                className={inputCls('name')} />
+              {err('name') && <p className="text-xs text-red-500 mt-1 flex items-center gap-1">⚠ {err('name')}</p>}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email address</label>
+              <input type="email" name="email" value={form.email} onChange={handle}
+                autoComplete="email" placeholder="you@example.com"
+                className={inputCls('email')} />
+              {err('email') && <p className="text-xs text-red-500 mt-1 flex items-center gap-1">⚠ {err('email')}</p>}
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+              <div className="relative">
+                <input type={showPwd ? 'text' : 'password'} name="password" value={form.password} onChange={handle}
+                  autoComplete="new-password" placeholder="Min. 8 characters"
+                  className={inputCls('password') + ' pr-12'} />
+                <button type="button" onClick={() => setShowPwd(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">
+                  {showPwd ? '🙈' : '👁️'}
+                </button>
+              </div>
+              {err('password') && <p className="text-xs text-red-500 mt-1 flex items-center gap-1">⚠ {err('password')}</p>}
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Confirm Password</label>
+              <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handle}
+                autoComplete="new-password" placeholder="Re-enter your password"
+                className={inputCls('confirmPassword')} />
+              {err('confirmPassword') && <p className="text-xs text-red-500 mt-1 flex items-center gap-1">⚠ {err('confirmPassword')}</p>}
+            </div>
+
+            <button type="submit" disabled={loading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold
+                         py-3.5 rounded-xl transition-colors disabled:opacity-50 text-base shadow-sm mt-2">
+              {loading ? '⏳ Creating account…' : 'Create Account →'}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-gray-500 mt-7">
+            Already have an account?{' '}
+            <Link to="/login" className="text-blue-600 font-bold hover:underline">Sign in →</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

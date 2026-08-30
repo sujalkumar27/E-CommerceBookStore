@@ -237,7 +237,7 @@ class CartServiceTest {
     // ─────────────────────────────────────────────────────────
 
     private User makeUser(String email) {
-        User u = new User(email, "hash");
+        User u = new User("Test User", email, "hash");
         setId(u, UUID.randomUUID());
         return u;
     }
@@ -252,3 +252,4 @@ class CartServiceTest {
         }
     }
 }
+

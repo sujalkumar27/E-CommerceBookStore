@@ -74,6 +74,10 @@ public class Address {
     @Column(nullable = false)
     private String pincode;
 
+    /** Mobile/phone number for delivery contact — 10-digit Indian mobile number */
+    @Column(nullable = false)
+    private String phone;
+
     /**
      * Whether this is the user's preferred/default delivery address.
      * At most one address per user should be true.

@@ -14,63 +14,79 @@ import LoadingSpinner from '../components/common/LoadingSpinner.jsx';
 import ErrorMessage   from '../components/common/ErrorMessage.jsx';
 import EmptyState     from '../components/common/EmptyState.jsx';
 
-const emptyForm = { fullName: '', line1: '', line2: '', city: '', state: '', pincode: '' };
+const emptyForm = { fullName: '', phone: '', line1: '', line2: '', city: '', state: '', pincode: '' };
+
+// Validate a single field
+const vf = (name, value) => {
+  if (name === 'fullName') return !value.trim() ? 'Required.' : '';
+  if (name === 'phone')    return !/^[6-9]\d{9}$/.test(value) ? 'Enter a valid 10-digit mobile number.' : '';
+  if (name === 'line1')    return !value.trim() ? 'Required.' : '';
+  if (name === 'city')     return !value.trim() ? 'Required.' : '';
+  if (name === 'state')    return !value.trim() ? 'Required.' : '';
+  if (name === 'pincode')  return !/^\d{6}$/.test(value) ? '6-digit pincode required.' : '';
+  return '';
+};
 
 // ── Reusable Address Form (used for Add and Edit) ──────────────────────────
 function AddressForm({ initial = emptyForm, onSubmit, onCancel, submitLabel = 'Save' }) {
-  const [form,   setForm]   = useState(initial);
-  const [errors, setErrors] = useState({});
+  const [form,    setForm]    = useState({ ...emptyForm, ...initial });
+  const [errors,  setErrors]  = useState({});
+  const [touched, setTouched] = useState({});
 
-  const handle = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-
-  const validate = () => {
-    const e = {};
-    if (!form.fullName.trim())          e.fullName = 'Required.';
-    if (!form.line1.trim())             e.line1    = 'Required.';
-    if (!form.city.trim())              e.city     = 'Required.';
-    if (!form.state.trim())             e.state    = 'Required.';
-    if (!/^\d{6}$/.test(form.pincode))  e.pincode  = '6-digit pincode required.';
-    return e;
+  const handle = (e) => {
+    const { name, value } = e.target;
+    if (name === 'phone'   && value.replace(/\D/g,'').length > 10) return;
+    if (name === 'pincode' && value.replace(/\D/g,'').length > 6)  return;
+    setForm((f) => ({ ...f, [name]: value }));
+    setTouched((t) => ({ ...t, [name]: true }));
+    setErrors((err) => ({ ...err, [name]: vf(name, value) }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    const required = ['fullName', 'phone', 'line1', 'city', 'state', 'pincode'];
+    const errs = {};
+    required.forEach((k) => { errs[k] = vf(k, form[k] || ''); });
+    const hasErrors = Object.values(errs).some(Boolean);
+    setErrors(errs);
+    setTouched(Object.fromEntries(required.map((k) => [k, true])));
+    if (hasErrors) return;
     onSubmit(form);
   };
 
+  const inp = (name) =>
+    `w-full border-2 rounded-xl px-3 py-2 text-sm focus:outline-none transition-colors
+     ${touched[name] && errors[name] ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'}`;
+
   const fields = [
-    { name: 'fullName', label: 'Full Name',          span: 2 },
-    { name: 'line1',    label: 'Address Line 1',     span: 2 },
-    { name: 'line2',    label: 'Line 2 (optional)',  span: 2 },
-    { name: 'city',     label: 'City',               span: 1 },
-    { name: 'state',    label: 'State',              span: 1 },
-    { name: 'pincode',  label: 'Pincode',            span: 1 },
+    { name: 'fullName', label: 'Full Name *',                    span: 2, type: 'text', placeholder: 'Recipient name' },
+    { name: 'phone',    label: 'Mobile Number * (10 digits)',    span: 2, type: 'tel',  placeholder: '9876543210', maxLength: 10 },
+    { name: 'line1',    label: 'Address Line 1 *',               span: 2, type: 'text', placeholder: 'House/flat, street' },
+    { name: 'line2',    label: 'Line 2 (optional)',              span: 2, type: 'text', placeholder: 'Landmark, apartment' },
+    { name: 'city',     label: 'City *',                         span: 1, type: 'text', placeholder: 'Mumbai' },
+    { name: 'state',    label: 'State *',                        span: 1, type: 'text', placeholder: 'Maharashtra' },
+    { name: 'pincode',  label: 'Pincode * (6 digits)',           span: 1, type: 'text', placeholder: '400001', maxLength: 6 },
   ];
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 mt-4">
-      {fields.map(({ name, label, span }) => (
+      {fields.map(({ name, label, span, type, placeholder, maxLength }) => (
         <div key={name} className={span === 2 ? 'col-span-2' : ''}>
-          <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
           <input
-            type="text"
-            name={name}
-            value={form[name]}
-            onChange={handle}
-            className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none
-              ${errors[name] ? 'border-red-400' : 'border-gray-300'}`}
+            type={type} name={name} value={form[name] || ''} onChange={handle}
+            placeholder={placeholder} maxLength={maxLength}
+            className={inp(name)}
           />
-          {errors[name] && <p className="text-xs text-red-500 mt-0.5">{errors[name]}</p>}
+          {touched[name] && errors[name] && <p className="text-xs text-red-500 mt-0.5">⚠ {errors[name]}</p>}
         </div>
       ))}
       <div className="col-span-2 flex gap-2 mt-1">
-        <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">
+        <button type="submit" className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700">
           {submitLabel}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="border border-gray-300 px-5 py-2 rounded-lg text-sm hover:bg-gray-50">
+          <button type="button" onClick={onCancel} className="border-2 border-gray-200 px-5 py-2.5 rounded-xl text-sm hover:bg-gray-50">
             Cancel
           </button>
         )}
@@ -206,6 +222,7 @@ export default function AddressManagementPage() {
               <div className="flex items-start justify-between">
                 <div className="text-sm">
                   <p className="font-semibold text-gray-900">{addr.fullName}</p>
+                  {addr.phone && <p className="text-gray-500 text-xs mb-0.5">📱 {addr.phone}</p>}
                   <p className="text-gray-600">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ''}</p>
                   <p className="text-gray-600">{addr.city}, {addr.state} – {addr.pincode}</p>
                 </div>

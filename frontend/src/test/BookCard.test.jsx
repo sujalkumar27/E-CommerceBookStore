@@ -46,7 +46,7 @@ describe('BookCard', () => {
 
   it('shows "In Stock" for available books', () => {
     renderCard({ available: true });
-    expect(screen.getByText('In Stock')).toBeInTheDocument();
+    expect(screen.getByText(/In Stock/)).toBeInTheDocument();
   });
 
   it('shows "Out of Stock" for unavailable books', () => {

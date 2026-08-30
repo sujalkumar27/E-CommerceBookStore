@@ -50,7 +50,7 @@ class AuthControllerTest extends BaseControllerTest {
 
     private AuthResponse buildAuthResponse() {
         return new AuthResponse(TOKEN,
-                new AuthResponse.UserInfo(UUID.randomUUID(), EMAIL, 0, Instant.now()));
+                new AuthResponse.UserInfo(UUID.randomUUID(), "Test User", EMAIL, 0, Instant.now()));
     }
 
     // ─────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ class AuthControllerTest extends BaseControllerTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "email": "alice@test.com", "password": "password123" }
+                                { "name": "Alice", "email": "alice@test.com", "password": "password123" }
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").value(TOKEN))
@@ -78,7 +78,7 @@ class AuthControllerTest extends BaseControllerTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "password": "password123" }
+                                { "name": "Alice", "password": "password123" }
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.email").exists());
@@ -90,7 +90,7 @@ class AuthControllerTest extends BaseControllerTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "email": "alice@test.com", "password": "short" }
+                                { "name": "Alice", "email": "alice@test.com", "password": "short" }
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.password").exists());
@@ -102,7 +102,7 @@ class AuthControllerTest extends BaseControllerTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "email": "not-an-email", "password": "password123" }
+                                { "name": "Alice", "email": "not-an-email", "password": "password123" }
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.email").exists());
@@ -117,7 +117,7 @@ class AuthControllerTest extends BaseControllerTest {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "email": "alice@test.com", "password": "password123" }
+                                { "name": "Alice", "email": "alice@test.com", "password": "password123" }
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409));

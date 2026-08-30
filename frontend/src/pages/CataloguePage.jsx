@@ -124,7 +124,7 @@ export default function CataloguePage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen">
       {/* Toast */}
       {toast && (
         <div className={`fixed top-20 right-4 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium transition-all
@@ -133,17 +133,56 @@ export default function CataloguePage() {
         </div>
       )}
 
-      {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {searchTerm ? `Results for "${searchTerm}"` : 'All Books'}
-        </h1>
-        {!loading && !error && (
-          <p className="text-sm text-gray-500 mt-1">
-            Page {currentPage + 1} of {totalPages || 1}
-          </p>
-        )}
-      </div>
+      {/* ── Hero banner — only on the home page (no search/filter active) ── */}
+      {!searchTerm && !filters.categoryId && !filters.available && (
+        <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-900 text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 flex flex-col md:flex-row items-center gap-8">
+            <div className="flex-1">
+              <p className="text-blue-300 text-sm font-semibold uppercase tracking-widest mb-2">📚 Welcome to BookStore</p>
+              <h1 className="text-4xl md:text-5xl font-black leading-tight mb-4">
+                Your next great<br />
+                <span className="text-blue-400">read is here.</span>
+              </h1>
+              <p className="text-slate-300 text-base mb-6 max-w-md">
+                Browse 113 hand-picked books across 8 categories. Find your next favourite — from technology to fiction.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {categories.slice(0, 5).map((cat) => (
+                  <button key={cat.id}
+                    onClick={() => handleFilterChange({ ...EMPTY_FILTERS, categoryId: cat.id })}
+                    className="bg-white/10 hover:bg-blue-600 text-white text-xs font-semibold px-4 py-1.5 rounded-full transition-colors border border-white/20">
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="hidden md:flex gap-4 flex-shrink-0">
+              {/* Decorative stacked book spines */}
+              {['📗', '📘', '📕', '📙'].map((emoji, i) => (
+                <div key={i} className={`text-7xl transform ${i % 2 === 0 ? 'rotate-2' : '-rotate-3'} drop-shadow-2xl`}>
+                  {emoji}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Page header — shown when searching or filtering */}
+      {(searchTerm || filters.categoryId || filters.available) && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {searchTerm ? `Results for "${searchTerm}"` : 'Filtered Books'}
+          </h1>
+          {!loading && !error && (
+            <p className="text-sm text-gray-500 mt-1">
+              Page {currentPage + 1} of {totalPages || 1} · {' '}
+              <button onClick={handleFilterReset} className="text-blue-600 hover:underline text-xs">Clear filters</button>
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Filter sidebar */}
@@ -188,6 +227,7 @@ export default function CataloguePage() {
             </>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

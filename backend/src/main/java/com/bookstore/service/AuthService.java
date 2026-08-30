@@ -68,7 +68,7 @@ public class AuthService {
         String hashedPassword = passwordEncoder.encode(request.password());
 
         // Step 3: Create and save the new User entity
-        User user = new User(request.email(), hashedPassword);
+        User user = new User(request.name(), request.email(), hashedPassword);
         userRepository.save(user);
 
         // Step 4: Generate a JWT token for the new user
@@ -119,6 +119,7 @@ public class AuthService {
                 token,
                 new AuthResponse.UserInfo(
                         user.getId(),
+                        user.getName(),
                         user.getEmail(),
                         user.getGiftPointBalance(),
                         user.getCreatedAt()

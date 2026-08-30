@@ -64,6 +64,13 @@ public class User implements UserDetails {
     private UUID id;
 
     /**
+     * The user's display name — shown in the UI (e.g. in the Navbar greeting).
+     * Not used for login — email is the login identifier.
+     */
+    @Column(nullable = false)
+    private String name;
+
+    /**
      * The user's email address — used as their username for login.
      * unique = true → database enforces no two users share the same email.
      */
@@ -100,10 +107,12 @@ public class User implements UserDetails {
     /**
      * Convenience constructor — used in AuthService when registering a new user.
      *
+     * @param name         - the user's display name
      * @param email        - the user's email
      * @param passwordHash - the BCrypt hash of their password (NOT the plain password)
      */
-    public User(String email, String passwordHash) {
+    public User(String name, String email, String passwordHash) {
+        this.name = name;
         this.email = email;
         this.passwordHash = passwordHash;
     }

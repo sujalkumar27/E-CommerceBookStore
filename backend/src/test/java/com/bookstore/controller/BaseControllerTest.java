@@ -41,7 +41,7 @@ public abstract class BaseControllerTest {
      * Used with .with(user(alice)) in MockMvc requests.
      */
     protected User buildUser(String email) {
-        User u = new User(email, "$2b$12$fakehash");
+        User u = new User("Test User", email, "$2b$12$fakehash");
         try {
             var field = User.class.getDeclaredField("id");
             field.setAccessible(true);
@@ -52,3 +52,4 @@ public abstract class BaseControllerTest {
         return u;
     }
 }
+

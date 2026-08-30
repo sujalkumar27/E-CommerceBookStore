@@ -80,7 +80,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        savedUser = new User(EMAIL, HASH);
+        savedUser = new User("Test User", EMAIL, HASH);
         // Assign a UUID so AuthResponse.UserInfo.id is populated
         // (Normally JPA assigns this on save — we set it manually in tests)
         try {
@@ -106,7 +106,7 @@ class AuthServiceTest {
         when(jwtUtil.generateToken(EMAIL)).thenReturn(TOKEN);
 
         // Act
-        RegisterRequest request = new RegisterRequest(EMAIL, PASSWORD);
+        RegisterRequest request = new RegisterRequest("Test User", EMAIL, PASSWORD);
         AuthResponse response = authService.register(request);
 
         // Assert: token and email are correct
@@ -125,7 +125,7 @@ class AuthServiceTest {
         // Arrange: this email is ALREADY in the database
         when(userRepository.existsByEmail(EMAIL)).thenReturn(true);
 
-        RegisterRequest request = new RegisterRequest(EMAIL, PASSWORD);
+        RegisterRequest request = new RegisterRequest("Test User", EMAIL, PASSWORD);
 
         // Assert: ConflictException is thrown before any save happens
         assertThatThrownBy(() -> authService.register(request))
@@ -175,3 +175,4 @@ class AuthServiceTest {
         verify(userRepository, never()).findByEmail(anyString());
     }
 }
+

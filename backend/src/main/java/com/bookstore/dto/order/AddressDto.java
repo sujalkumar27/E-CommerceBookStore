@@ -10,6 +10,7 @@ import java.util.UUID;
 public record AddressDto(
         UUID id,
         String fullName,
+        String phone,
         String line1,
         String line2,
         String city,

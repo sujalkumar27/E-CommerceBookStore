@@ -98,6 +98,7 @@ public class AddressService {
     /** Copy request fields onto an Address entity */
     private void mapFields(Address address, AddressRequest request) {
         address.setFullName(request.fullName());
+        address.setPhone(request.phone());
         address.setLine1(request.line1());
         address.setLine2(request.line2());
         address.setCity(request.city());
@@ -116,6 +117,7 @@ public class AddressService {
         return new AddressDto(
                 address.getId(),
                 address.getFullName(),
+                address.getPhone(),
                 address.getLine1(),
                 address.getLine2(),
                 address.getCity(),
