@@ -3,7 +3,7 @@
 // UI: Split layout — decorative left panel + form right panel on desktop.
 //     Full-width card on mobile.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { login as loginApi } from '../api/authApi.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -28,6 +28,9 @@ export default function LoginPage() {
   const [error,    setError]    = useState(null);
   const [loading,  setLoading]  = useState(false);
   const [showPwd,  setShowPwd]  = useState(false);
+
+  // Update browser tab title on mount
+  useEffect(() => { document.title = 'Login | BookStore'; }, []);
 
   if (isLoggedIn) { navigate('/'); return null; }
 

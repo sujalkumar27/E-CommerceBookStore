@@ -10,8 +10,11 @@
 // WHAT THIS CONTEXT PROVIDES:
 //   - cartCount          : number of items currently in the cart
 //   - refreshCartCount() : re-fetches the cart from the backend and updates the count
+//
+// FIX: CartProvider now calls refreshCartCount() on mount so the badge shows the
+//   real count immediately for logged-in users instead of always starting at 0.
 
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { getCart } from '../api/cartApi';
 
 const CartContext = createContext(undefined);
@@ -31,11 +34,16 @@ export function CartProvider({ children }) {
       const total = res.data.items.reduce((sum, item) => sum + item.quantity, 0);
       setCartCount(total);
     } catch {
-      // If the user is not logged in, getCart will 401 → axiosClient redirects.
-      // For guests we simply show 0.
+      // If the user is not logged in, getCart will 401 — just show 0 for guests.
       setCartCount(0);
     }
   }, []);
+
+  // Populate cart count on first render so the badge is correct immediately after
+  // login or a page refresh (without this, the badge always starts at 0).
+  useEffect(() => {
+    refreshCartCount();
+  }, [refreshCartCount]);
 
   return (
     <CartContext.Provider value={{ cartCount, refreshCartCount }}>

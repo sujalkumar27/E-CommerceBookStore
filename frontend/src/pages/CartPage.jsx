@@ -42,6 +42,9 @@ export default function CartPage() {
 
   useEffect(() => { loadCart(); }, [loadCart]);
 
+  // Update browser tab title
+  useEffect(() => { document.title = 'My Cart | BookStore'; }, []);
+
   // Load recommendations (non-critical — failure is silently ignored)
   useEffect(() => {
     getRecommendations()

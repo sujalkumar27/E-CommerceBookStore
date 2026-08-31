@@ -9,6 +9,7 @@
 //   Public (no login needed):   /, /books/:id, /login, /register
 //   Protected (login required): /cart, /checkout, /checkout/confirmation,
 //                               /orders, /orders/:id, /account/addresses
+//   Catch-all:                  * → NotFoundPage (prevents blank white screen)
 //
 //   ProtectedRoute wraps each auth-required page and redirects guests to /login.
 
@@ -30,6 +31,7 @@ import PurchaseConfirmationPage   from './pages/PurchaseConfirmationPage.jsx';
 import OrderHistoryPage           from './pages/OrderHistoryPage.jsx';
 import OrderDetailPage            from './pages/OrderDetailPage.jsx';
 import AddressManagementPage      from './pages/AddressManagementPage.jsx';
+import NotFoundPage               from './pages/NotFoundPage.jsx';
 
 export default function App() {
   return (
@@ -75,6 +77,11 @@ export default function App() {
                 path="/account/addresses"
                 element={<ProtectedRoute><AddressManagementPage /></ProtectedRoute>}
               />
+
+              {/* ── 404 catch-all ─────────────────────────────────────── */}
+              {/* Matches any URL that did not match a route above.        */}
+              {/* Without this, React renders a blank white screen.        */}
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
 

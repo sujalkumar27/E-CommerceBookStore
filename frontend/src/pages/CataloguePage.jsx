@@ -47,6 +47,11 @@ export default function CataloguePage() {
   const [filters,    setFilters]    = useState(EMPTY_FILTERS);
   const [toast,      setToast]      = useState(null);   // success/error toast message
 
+  // Update browser tab title
+  useEffect(() => {
+    document.title = searchTerm ? `"${searchTerm}" – BookStore` : 'BookStore – Browse Books';
+  }, [searchTerm]);
+
   // ── Load categories once on mount ──────────────────────────────────────────
   useEffect(() => {
     getCategories()

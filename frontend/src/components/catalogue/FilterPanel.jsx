@@ -38,16 +38,26 @@ export default function FilterPanel({ categories, filters, onChange, onReset }) 
           Price Range (₹)
         </label>
         <div className="flex gap-2">
+          {/* min="0" prevents the spinner from going negative.
+              The onChange guard also rejects any manually typed negative value. */}
           <input
             type="number" min="0" placeholder="Min"
             value={filters.minPrice || ''}
-            onChange={(e) => handle('minPrice', e.target.value || null)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v !== '' && Number(v) < 0) return; // reject negatives typed manually
+              handle('minPrice', v || null);
+            }}
             className="w-1/2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
           />
           <input
             type="number" min="0" placeholder="Max"
             value={filters.maxPrice || ''}
-            onChange={(e) => handle('maxPrice', e.target.value || null)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v !== '' && Number(v) < 0) return; // reject negatives typed manually
+              handle('maxPrice', v || null);
+            }}
             className="w-1/2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
           />
         </div>

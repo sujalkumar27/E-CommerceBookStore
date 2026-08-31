@@ -3,7 +3,7 @@
 // FIXED: now sends { name, email, password } to match the backend RegisterRequest DTO.
 // VALIDATION: real-time field validation with clear error messages.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { register } from '../api/authApi.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -21,6 +21,9 @@ export default function RegisterPage() {
   const { login, isLoggedIn } = useAuth();
   const { refreshCartCount }  = useCart();
   const navigate = useNavigate();
+
+  // Update browser tab title on mount
+  useEffect(() => { document.title = 'Register | BookStore'; }, []);
 
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [touched,     setTouched]     = useState({});

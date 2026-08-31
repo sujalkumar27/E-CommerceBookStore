@@ -5,6 +5,8 @@
 // ACTIONS:
 //   - Cancel order (if cancellable) → POST /api/orders/:id/cancel
 //   - Buy Again → POST /api/orders/:id/buy-again
+//
+// FIX: Replaced window.confirm() with inline modal confirmation dialog.
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -19,10 +21,12 @@ export default function OrderDetailPage() {
   const navigate = useNavigate();
   const { refreshCartCount } = useCart();
 
-  const [order,   setOrder]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-  const [toast,   setToast]   = useState(null);
+  const [order,           setOrder]           = useState(null);
+  const [loading,         setLoading]         = useState(true);
+  const [error,           setError]           = useState(null);
+  const [toast,           setToast]           = useState(null);
+  // showCancelConfirm: whether the inline cancel confirmation modal is visible
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const showToast = (msg, isError = false) => {
     setToast({ msg, isError });
@@ -33,15 +37,22 @@ export default function OrderDetailPage() {
     setLoading(true);
     setError(null);
     getOrderById(id)
-      .then((res) => setOrder(res.data))
+      .then((res) => {
+        setOrder(res.data);
+        document.title = `Order #${res.data.id?.slice(0, 8).toUpperCase()} | BookStore`;
+      })
       .catch(() => setError('Could not load this order.'))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { loadOrder(); }, [id]);
 
-  const handleCancel = async () => {
-    if (!window.confirm('Cancel this order?')) return;
+  // Step 1: user clicks "Cancel Order" → show inline modal
+  const handleCancel = () => setShowCancelConfirm(true);
+
+  // Step 2a: user confirms inside the modal
+  const handleConfirmCancel = async () => {
+    setShowCancelConfirm(false);
     try {
       await cancelOrder(id);
       showToast('✅ Order cancelled.');
@@ -78,6 +89,30 @@ export default function OrderDetailPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
+      {/* Inline cancel confirmation modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 mx-4 max-w-sm w-full">
+            <p className="font-semibold text-gray-900 mb-1">Cancel this order?</p>
+            <p className="text-sm text-gray-500 mb-5">This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleConfirmCancel}
+                className="flex-1 bg-red-600 text-white font-semibold py-2 rounded-xl hover:bg-red-700 text-sm"
+              >
+                Yes, cancel it
+              </button>
+              <button
+                onClick={() => setShowCancelConfirm(false)}
+                className="flex-1 border border-gray-300 text-gray-700 font-medium py-2 rounded-xl hover:bg-gray-50 text-sm"
+              >
+                Keep order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       {toast && (
         <div className={`fixed top-20 right-4 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium

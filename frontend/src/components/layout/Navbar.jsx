@@ -1,8 +1,11 @@
 // Navbar.jsx — Top navigation bar rendered on every page.
 // Redesigned: richer colour, better spacing, user greeting.
+//
+// FIX: Search bar now reads the current ?search= query param from the URL so
+//   navigating Back after a search restores the search term in the input.
 
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
 
@@ -10,8 +13,16 @@ export default function Navbar() {
   const { isLoggedIn, user, logout } = useAuth();
   const { cartCount } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Sync the search input with the URL's ?search= param whenever the URL changes.
+  // This ensures Back/Forward navigation restores the correct search term.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchTerm(params.get('search') || '');
+  }, [location.search]);
 
   const handleSearch = (e) => {
     e.preventDefault();

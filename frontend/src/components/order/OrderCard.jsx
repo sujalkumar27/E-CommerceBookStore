@@ -4,10 +4,16 @@
 //   order      (object)   — OrderDto from the API
 //   onCancel   (function) — called with orderId
 //   onBuyAgain (function) — called with orderId
+//
+// FIX: The entire card body (excluding the action buttons) is now wrapped in a
+//   Link so clicking anywhere on the card navigates to the order detail page.
+//   Action buttons stop propagation so they don't trigger navigation.
 
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function OrderCard({ order, onCancel, onBuyAgain }) {
+  const navigate = useNavigate();
+
   // Format ISO date string to a readable date
   const formatDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-IN', {
     year: 'numeric', month: 'short', day: 'numeric',
@@ -21,13 +27,20 @@ export default function OrderCard({ order, onCancel, onBuyAgain }) {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+    // The outer card is a clickable area — navigates to the detail page.
+    // cursor-pointer on the card body; buttons inside stop propagation.
+    <div
+      className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      onClick={() => navigate(`/orders/${order.id}`)}
+      role="button"
+      aria-label={`View order ${order.id.slice(0, 8).toUpperCase()}`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
-        {/* Order ID + date */}
+        {/* Order ID + date — keep as a link for accessible focus ring */}
         <div>
-          <Link to={`/orders/${order.id}`} className="text-sm font-semibold text-blue-700 hover:underline">
+          <span className="text-sm font-semibold text-blue-700">
             Order #{order.id.slice(0, 8).toUpperCase()}
-          </Link>
+          </span>
           <p className="text-xs text-gray-400 mt-0.5">Placed {formatDate(order.createdAt)}</p>
         </div>
 
@@ -53,15 +66,16 @@ export default function OrderCard({ order, onCancel, onBuyAgain }) {
       <div className="flex items-center justify-between">
         <span className="font-bold text-gray-900">₹{order.orderTotal?.toFixed(2)}</span>
         <div className="flex gap-2">
+          {/* Stop propagation so button clicks don't also trigger card navigation */}
           <button
-            onClick={() => onBuyAgain(order.id)}
+            onClick={(e) => { e.stopPropagation(); onBuyAgain(order.id); }}
             className="text-xs font-medium text-blue-600 border border-blue-300 px-3 py-1.5 rounded-lg hover:bg-blue-50"
           >
             Buy Again
           </button>
           {order.cancellable && (
             <button
-              onClick={() => onCancel(order.id)}
+              onClick={(e) => { e.stopPropagation(); onCancel(order.id); }}
               className="text-xs font-medium text-red-600 border border-red-300 px-3 py-1.5 rounded-lg hover:bg-red-50"
             >
               Cancel

@@ -118,6 +118,7 @@ export default function AddressManagementPage() {
   };
 
   useEffect(() => { loadAddresses(); }, []);
+  useEffect(() => { document.title = 'My Addresses | BookStore'; }, []);
 
   const handleAdd = async (data) => {
     try {
@@ -141,8 +142,16 @@ export default function AddressManagementPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this address?')) return;
+  // deletingId: UUID of the address pending inline confirmation; null = none
+  const [deletingId, setDeletingId] = useState(null);
+
+  // Step 1: user clicks "Delete" → show inline confirm for this address
+  const handleDeleteRequest = (id) => setDeletingId(id);
+
+  // Step 2a: user confirms → execute deletion
+  const handleDelete = async () => {
+    const id = deletingId;
+    setDeletingId(null);
     try {
       await deleteAddress(id);
       setAddresses((prev) => prev.filter((a) => a.id !== id));
@@ -154,6 +163,30 @@ export default function AddressManagementPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
+      {/* Inline delete confirmation modal */}
+      {deletingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 mx-4 max-w-sm w-full">
+            <p className="font-semibold text-gray-900 mb-1">Delete this address?</p>
+            <p className="text-sm text-gray-500 mb-5">This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDelete}
+                className="flex-1 bg-red-600 text-white font-semibold py-2 rounded-xl hover:bg-red-700 text-sm"
+              >
+                Yes, delete it
+              </button>
+              <button
+                onClick={() => setDeletingId(null)}
+                className="flex-1 border border-gray-300 text-gray-700 font-medium py-2 rounded-xl hover:bg-gray-50 text-sm"
+              >
+                Keep it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       {toast && (
         <div className={`fixed top-20 right-4 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium
@@ -234,7 +267,7 @@ export default function AddressManagementPage() {
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(addr.id)}
+                    onClick={() => handleDeleteRequest(addr.id)}
                     className="text-xs text-red-600 border border-red-300 px-3 py-1.5 rounded-lg hover:bg-red-50"
                   >
                     Delete

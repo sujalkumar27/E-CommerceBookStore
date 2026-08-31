@@ -60,6 +60,11 @@ export default function CheckoutPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Update browser tab title
+  useEffect(() => {
+    document.title = 'Checkout | BookStore';
+  }, []);
+
   // ── Add new address (called from AddressSelector) ──────────────────────────
   const handleAddNewAddress = async (addressData) => {
     try {
@@ -115,20 +120,43 @@ export default function CheckoutPage() {
 
   if (loading) return <div className="max-w-2xl mx-auto px-4 py-12"><LoadingSpinner message="Preparing checkout…" /></div>;
 
+  // Guard: do not allow checkout with an empty cart
+  const cartIsEmpty = !cart?.items || cart.items.length === 0;
+  if (!loading && cartIsEmpty) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16 text-center">
+        <div className="text-5xl mb-4">🛒</div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
+        <p className="text-gray-500 mb-6">Add some books before checking out.</p>
+        <button
+          onClick={() => navigate('/')}
+          className="bg-blue-600 text-white font-bold px-8 py-3 rounded-xl hover:bg-blue-700 transition-colors"
+        >
+          Browse Books
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
 
-      {/* Step indicator */}
+      {/* Step indicator — completed steps are clickable to go back */}
       <div className="flex items-center mb-8">
         {STEPS.map((label, i) => (
           <div key={i} className="flex items-center flex-1 last:flex-none">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
-              ${i < step ? 'bg-green-500 text-white' :
-                i === step ? 'bg-blue-600 text-white' :
-                'bg-gray-200 text-gray-500'}`}>
+            <button
+              onClick={() => { if (i < step) { setError(null); setStep(i); } }}
+              disabled={i >= step}
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                transition-colors disabled:cursor-default
+                ${i < step ? 'bg-green-500 text-white hover:bg-green-600 cursor-pointer' :
+                  i === step ? 'bg-blue-600 text-white' :
+                  'bg-gray-200 text-gray-500'}`}
+            >
               {i < step ? '✓' : i + 1}
-            </div>
+            </button>
             <span className={`ml-2 text-sm hidden sm:block ${i === step ? 'font-semibold text-gray-900' : 'text-gray-500'}`}>
               {label}
             </span>

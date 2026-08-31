@@ -21,7 +21,7 @@ export default function RecommendationPanel({ books }) {
                        shadow-sm hover:shadow-md transition-shadow"
           >
             <img
-              src={book.coverImageUrl || 'https://via.placeholder.com/144x200?text=Book'}
+              src={book.coverImageUrl || 'https://placehold.co/144x200?text=Book'}
               alt={book.title}
               className="w-full h-48 object-cover"
               loading="lazy"

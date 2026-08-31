@@ -8,6 +8,7 @@
 //
 // If the user navigates here directly (no state), redirect to /orders.
 
+import { useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import OrderItemRow from '../components/order/OrderItemRow.jsx';
 
@@ -15,6 +16,15 @@ export default function PurchaseConfirmationPage() {
   const location = useLocation();
   const navigate  = useNavigate();
   const order = location.state?.order;
+
+  // Update browser tab title — use order ID if available, generic otherwise
+  useEffect(() => {
+    if (order?.orderId) {
+      document.title = `Order Confirmed #${order.orderId.slice(0, 8).toUpperCase()} | BookStore`;
+    } else {
+      document.title = 'Order Confirmed | BookStore';
+    }
+  }, [order]);
 
   // Guard: no order data means the user refreshed or navigated directly
   if (!order) {

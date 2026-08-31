@@ -16,9 +16,9 @@ export default function CartItemRow({ item, onUpdate, onRemove, disabled }) {
       {/* Book cover thumbnail */}
       <Link to={`/books/${book.id}`} className="flex-shrink-0">
         <img
-          src={book.coverImageUrl || 'https://via.placeholder.com/80x110?text=Book'}
+          src={book.coverImageUrl || 'https://placehold.co/80x110?text=Book'}
           alt={book.title}
-          className="w-16 h-22 object-cover rounded-lg"
+          className="w-16 h-24 object-cover rounded-lg"
         />
       </Link>
 

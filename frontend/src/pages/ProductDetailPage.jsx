@@ -7,8 +7,13 @@
 //   1. Reads :id from the URL params
 //   2. Calls GET /api/books/:id
 //   3. Shows full book info: cover, description, ISBN, publisher, delivery estimate
-//   4. "Add to Cart" button — auth required; guests are redirected to /login
+//   4. Quantity selector + "Add to Cart" — auth required; guests are redirected to /login
 //   5. Related books strip at the bottom
+//
+// FIXES:
+//   - via.placeholder.com → placehold.co (via.placeholder returns 503 errors)
+//   - Added "← Back" button so users can return without losing scroll position
+//   - Added quantity selector before "Add to Cart" (BR-005 / §10.1)
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -25,17 +30,25 @@ export default function ProductDetailPage() {
   const { refreshCartCount } = useCart();
   const navigate = useNavigate();
 
-  const [book,    setBook]    = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-  const [adding,  setAdding]  = useState(false);
-  const [toast,   setToast]   = useState(null);
+  const [book,     setBook]     = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+  const [adding,   setAdding]   = useState(false);
+  const [toast,    setToast]    = useState(null);
+  // Quantity selector — defaults to 1, min 1, max 10
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
+    // Reset quantity back to 1 when navigating between product pages
+    setQuantity(1);
     getBookById(id)
-      .then((res) => setBook(res.data))
+      .then((res) => {
+        setBook(res.data);
+        // Update tab title to the book name once loaded
+        document.title = `${res.data.title} | BookStore`;
+      })
       .catch(() => setError('Book not found or could not be loaded.'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -44,9 +57,9 @@ export default function ProductDetailPage() {
     if (!isLoggedIn) { navigate('/login'); return; }
     setAdding(true);
     try {
-      await addItem(id, 1);
+      await addItem(id, quantity);
       await refreshCartCount();
-      setToast({ msg: '✅ Added to cart!', isError: false });
+      setToast({ msg: `✅ ${quantity > 1 ? `${quantity} copies` : 'Added'} to cart!`, isError: false });
     } catch (err) {
       setToast({ msg: '❌ ' + (err.response?.data?.message || 'Could not add to cart.'), isError: true });
     } finally {
@@ -75,6 +88,14 @@ export default function ProductDetailPage() {
         </div>
       )}
 
+      {/* ← Back button — navigate(-1) returns to previous page preserving scroll */}
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-4 text-sm text-gray-500 hover:text-blue-700 flex items-center gap-1 transition-colors"
+      >
+        ← Back
+      </button>
+
       {/* Breadcrumb */}
       <nav className="text-sm text-gray-500 mb-6">
         <Link to="/" className="hover:text-blue-700">Home</Link>
@@ -87,7 +108,7 @@ export default function ProductDetailPage() {
         {/* Book cover */}
         <div className="flex-shrink-0 w-full md:w-64">
           <img
-            src={book.coverImageUrl || `https://via.placeholder.com/256x360?text=${encodeURIComponent(book.title)}`}
+            src={book.coverImageUrl || `https://placehold.co/256x360?text=${encodeURIComponent(book.title)}`}
             alt={`Cover of ${book.title}`}
             className="w-full rounded-2xl shadow-md object-cover"
           />
@@ -119,6 +140,34 @@ export default function ProductDetailPage() {
             </p>
           )}
 
+          {/* Quantity selector — only shown when the book is in stock */}
+          {book.available && (
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-sm font-medium text-gray-600">Qty:</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  disabled={quantity <= 1}
+                  className="w-8 h-8 rounded-full border border-gray-300 text-gray-600
+                             hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed
+                             text-lg font-bold flex items-center justify-center"
+                >
+                  −
+                </button>
+                <span className="w-8 text-center text-sm font-semibold">{quantity}</span>
+                <button
+                  onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                  disabled={quantity >= 10}
+                  className="w-8 h-8 rounded-full border border-gray-300 text-gray-600
+                             hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed
+                             text-lg font-bold flex items-center justify-center"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Add to Cart */}
           <button
             onClick={handleAddToCart}
@@ -129,7 +178,7 @@ export default function ProductDetailPage() {
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               } disabled:opacity-60`}
           >
-            {adding ? 'Adding…' : book.available ? 'Add to Cart' : 'Unavailable'}
+            {adding ? 'Adding…' : book.available ? `Add ${quantity > 1 ? `${quantity} ` : ''}to Cart` : 'Unavailable'}
           </button>
 
           {/* Metadata table */}
@@ -163,7 +212,7 @@ export default function ProductDetailPage() {
                 className="flex-shrink-0 w-36 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md"
               >
                 <img
-                  src={rb.coverImageUrl || 'https://via.placeholder.com/144x200?text=Book'}
+                  src={rb.coverImageUrl || 'https://placehold.co/144x200?text=Book'}
                   alt={rb.title}
                   className="w-full h-48 object-cover"
                   loading="lazy"
