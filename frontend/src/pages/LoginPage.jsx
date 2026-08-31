@@ -45,10 +45,16 @@ export default function LoginPage() {
       const from = location.state?.from?.pathname || '/';
       navigate(from, { replace: true });
     } catch (err) {
-      if (err.response?.status === 401 || err.response?.status === 400) {
-        setError('Invalid email or password.');
+      const status = err.response?.status;
+      if (status === 400 || status === 401 || status === 403) {
+        // 400 = bad request (validation), 401 = wrong credentials,
+        // 403 = Spring Security rejected before handler (same root cause: bad credentials)
+        setError('Incorrect email or password. Please check your details and try again.');
+      } else if (!err.response) {
+        // No response at all — backend is unreachable
+        setError('Cannot reach the server. Please make sure the backend is running.');
       } else {
-        setError('Something went wrong. Please try again.');
+        setError('Something went wrong. Please try again later.');
       }
     } finally {
       setLoading(false);

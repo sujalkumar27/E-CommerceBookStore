@@ -1,10 +1,13 @@
 package com.bookstore.config;
 
 import com.bookstore.security.JwtAuthFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -16,8 +19,13 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import java.time.Instant;
+import java.util.Map;
 
 /**
  * ============================================================
@@ -84,9 +92,74 @@ public class SecurityConfig {
 
             // Run our JWT filter BEFORE Spring's default login filter
             // So every request is checked for a valid token first
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+
+            // ── Custom error responses ──────────────────────────────────────────
+            //
+            // WHY THIS IS NEEDED:
+            // By default, Spring Security's ExceptionTranslationFilter returns its own
+            // HTML error page (or a raw 403) when authentication/authorisation fails.
+            // This bypasses our GlobalExceptionHandler entirely, so the frontend gets
+            // a 403 with no JSON body instead of the expected 401/403 JSON error.
+            //
+            // FIX:
+            //   authenticationEntryPoint — called when a request has NO valid credentials
+            //     (anonymous user hits a protected route) → should return 401 Unauthorized
+            //   accessDeniedHandler — called when a request HAS valid credentials but
+            //     lacks permission for the resource → should return 403 Forbidden
+            //
+            // Both handlers write a clean JSON error body so the frontend can parse it.
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authenticationEntryPoint())
+                .accessDeniedHandler(accessDeniedHandler())
+            );
 
         return http.build();
+    }
+
+    /**
+     * AuthenticationEntryPoint — invoked when an unauthenticated request reaches a
+     * protected endpoint (no token, or token validation failed before reaching the
+     * controller).  Returns HTTP 401 with a JSON body matching our ErrorResponse shape.
+     *
+     * Without this, Spring Security writes its own redirect / HTML 403 page,
+     * which the frontend cannot parse.
+     */
+    @Bean
+    public AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);           // 401
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            new ObjectMapper().writeValue(response.getWriter(), Map.of(
+                    "status",    401,
+                    "error",     "Unauthorized",
+                    "message",   "Authentication required. Please log in.",
+                    "timestamp", Instant.now().toString(),
+                    "path",      request.getRequestURI()
+            ));
+        };
+    }
+
+    /**
+     * AccessDeniedHandler — invoked when an authenticated user tries to access a
+     * resource they do not have permission for.  Returns HTTP 403 with a JSON body.
+     *
+     * Also covers the case where Spring Security's ExceptionTranslationFilter
+     * intercepts a BadCredentialsException and would otherwise silently return 403.
+     */
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, accessDeniedException) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);              // 403
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            new ObjectMapper().writeValue(response.getWriter(), Map.of(
+                    "status",    403,
+                    "error",     "Forbidden",
+                    "message",   "You do not have permission to access this resource.",
+                    "timestamp", Instant.now().toString(),
+                    "path",      request.getRequestURI()
+            ));
+        };
     }
 
     /**

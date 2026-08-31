@@ -77,16 +77,30 @@ export default function RegisterPage() {
       await refreshCartCount();
       navigate('/');
     } catch (err) {
-      if (err.response?.status === 409) {
-        setServerError('An account with this email already exists.');
-      } else if (err.response?.status === 400 && err.response.data?.fieldErrors) {
-        // Map backend field validation errors onto form fields
+      const status = err.response?.status;
+      if (status === 409) {
+        // Duplicate email — the most common registration error
+        setServerError('An account with this email already exists. Try logging in instead.');
+      } else if (status === 400 && err.response.data?.fieldErrors) {
+        // Backend returned field-level validation errors — map them onto the form
         const fe = {};
         Object.entries(err.response.data.fieldErrors).forEach(([field, msg]) => { fe[field] = msg; });
         setFieldErrors(fe);
         setTouched({ name: true, email: true, password: true, confirmPassword: true });
+      } else if (status === 400) {
+        // Generic bad request from backend without field errors
+        setServerError(err.response.data?.message || 'Some of your details are invalid. Please check and try again.');
+      } else if (status === 403) {
+        // 403 from Spring Security — almost always means the backend rejected the CORS
+        // preflight or the security config is blocking the request.
+        // Give the user a clear message and log the detail for debugging.
+        console.error('Register returned 403:', err.response);
+        setServerError('Registration is currently unavailable. Please make sure the backend server is running and try again.');
+      } else if (!err.response) {
+        // Network error — backend is unreachable
+        setServerError('Cannot reach the server. Please make sure the backend is running and try again.');
       } else {
-        setServerError('Something went wrong. Please try again.');
+        setServerError('Something went wrong. Please try again later.');
       }
     } finally {
       setLoading(false);

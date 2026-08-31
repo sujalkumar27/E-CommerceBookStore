@@ -2,7 +2,8 @@
 //
 // Tests:
 //   1. Renders the email and password fields
-//   2. Shows "Invalid email or password." on 401
+//   2. Shows a helpful error message on 401 (bad credentials)
+//   3. Shows the same helpful error message on 403 (Spring Security rejection)
 //   3. Calls login() and navigates on successful submission
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -47,14 +48,25 @@ describe('LoginPage', () => {
     expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
   });
 
-  it('shows generic error message on 401 response', async () => {
+  it('shows credential error on 401 response', async () => {
     loginApi.mockRejectedValue({ response: { status: 401 } });
     renderPage();
     fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: 'a@b.com' } });
     fireEvent.change(screen.getByPlaceholderText('••••••••'),         { target: { value: 'wrong' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
     await waitFor(() => {
-      expect(screen.getByText('Invalid email or password.')).toBeInTheDocument();
+      expect(screen.getByText(/incorrect email or password/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows credential error on 403 response (Spring Security rejection)', async () => {
+    loginApi.mockRejectedValue({ response: { status: 403 } });
+    renderPage();
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: 'a@b.com' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'),         { target: { value: 'wrong' } });
+    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/incorrect email or password/i)).toBeInTheDocument();
     });
   });
 
